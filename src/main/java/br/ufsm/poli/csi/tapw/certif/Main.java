@@ -28,19 +28,19 @@ public class Main {
 
         // gera nova requisicao obter chave publica
 
-       Requisicao req = new Requisicao();
-       req.setTipoRequisicao(OBTER_CHAVE_PUBLICA);
-       oout.writeObject(req);
-       oout.flush();
-       System.out.println("Enviou req obter chave publica");
+        Requisicao req = new Requisicao();
+        req.setTipoRequisicao(OBTER_CHAVE_PUBLICA);
+        oout.writeObject(req);
+        oout.flush();
+        System.out.println("Enviou req obter chave publica");
 
-       ObjectInputStream oin = new ObjectInputStream(socket.getInputStream());
-       // recebe a chave publica do CA
+        ObjectInputStream oin = new ObjectInputStream(socket.getInputStream());
+        // recebe a chave publica do CA
 
         Requisicao resp = (Requisicao) oin.readObject();
-        X509EncodedKeySpec pubKeySpec  = new X509EncodedKeySpec(resp.getResposta());
+        X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(resp.getResposta());
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PublicKey chavePublica  = keyFactory.generatePublic(pubKeySpec);
+        PublicKey chavePublica = keyFactory.generatePublic(pubKeySpec);
         System.out.println("Recebeu chave pública do CA");
 
 
@@ -123,7 +123,7 @@ public class Main {
         Mensagem msg = new Mensagem();
         msg.setMensagem("Mensagem teste".getBytes());
         msg.setCertificado(certAssinado);
-        // msg.setAssinatura(certAssinado.getAssinatura());
+        msg.setAssinatura(certAssinado.getAssinatura());
 
         // transforma msg em JSON e depois em bytearray
 
@@ -131,11 +131,15 @@ public class Main {
         System.out.println(msgJSON);
         byte[] msgBarr = msgJSON.getBytes();
 
+        // criptografa msg  com chave de sessao
+        aes.init(Cipher.ENCRYPT_MODE, chaveSessao);
+        byte[] msgCifrada = aes.doFinal(msgBarr);
+
         // envia requisicao de enviar mensagem
 
         Requisicao req3 = new Requisicao();
         req3.setTipoRequisicao(ENVIAR_MENSAGEM);
-        req3.setRequisicao(msgBarr);
+        req3.setRequisicao(msgCifrada);
         req3.setChaveSessao(chaveSessaoCifrada);
 
         // envia mensagem
@@ -144,8 +148,5 @@ public class Main {
         oout = new ObjectOutputStream(socket.getOutputStream());
         oout.writeObject(req3);
         oout.flush();
-        socket.close();
-
-
     }
 }
